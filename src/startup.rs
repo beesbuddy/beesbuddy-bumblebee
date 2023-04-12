@@ -1,11 +1,11 @@
-use std::fs;
 use crate::configuration::{DatabaseSettings, Settings};
-use crate::routes::{health_check};
+use crate::routes::{admin_dashboard, admin_subscriptions, health_check, home};
 use actix_web::dev::Server;
 use actix_web::web::Data;
 use actix_web::{web, App, HttpServer};
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
+use std::fs;
 use std::net::TcpListener;
 use std::path::PathBuf;
 use tracing_actix_web::TracingLogger;
@@ -18,7 +18,6 @@ pub enum Error {
     Startup(#[from] std::io::Error),
 }
 
-
 pub struct Application {
     port: u16,
     server: Server,
@@ -27,7 +26,6 @@ pub struct Application {
 impl Application {
     pub async fn build(configuration: Settings) -> Result<Self, Error> {
         let connection_pool = get_connection_pool(&configuration.database);
-
 
         let address = format!(
             "{}:{}",
@@ -79,16 +77,21 @@ fn run(
     let server = HttpServer::new(move || {
         App::new()
             .wrap(TracingLogger::default())
+            .route("/", web::get().to(home))
+            .service(web::scope("/admin")
+                .route("/dashboard", web::get().to(admin_dashboard))
+                .route("/subscriptions", web::get().to(admin_subscriptions))
+            )
             .route("/health_check", web::get().to(health_check))
             .service(
-                actix_files::Files::new("/", web_dir_path.as_str())
+                actix_files::Files::new("/ui", web_dir_path.as_str())
                     .redirect_to_slash_directory()
                     .index_file("index.html"),
             )
             .app_data(db_pool.clone())
             .app_data(base_url.clone())
     })
-        .listen(listener)?
-        .run();
+    .listen(listener)?
+    .run();
     Ok(server)
 }

@@ -1,10 +1,10 @@
+use beesbuddy_bumblebee::configuration::{get_configuration, DatabaseSettings};
+use beesbuddy_bumblebee::startup::{get_connection_pool, Application};
+use beesbuddy_bumblebee::telemetry::{get_subscriber, init_subscriber};
 use once_cell::sync::Lazy;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use uuid::Uuid;
 use wiremock::MockServer;
-use beesbuddy_bumblebee::configuration::{get_configuration, DatabaseSettings};
-use beesbuddy_bumblebee::startup::{get_connection_pool, Application};
-use beesbuddy_bumblebee::telemetry::{get_subscriber, init_subscriber};
 
 // Ensure that the `tracing` stack is only initialised once using `once_cell`
 static TRACING: Lazy<()> = Lazy::new(|| {
@@ -22,8 +22,35 @@ static TRACING: Lazy<()> = Lazy::new(|| {
 pub struct TestApp {
     pub address: String,
     pub port: u16,
+    pub api_client: reqwest::Client,
     pub db_pool: PgPool,
     pub email_server: MockServer,
+}
+
+impl TestApp {
+    pub async fn get_admin_dashboard(&self) -> reqwest::Response {
+        self.api_client
+            .get(&format!("{}/admin/dashboard", &self.address))
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
+
+    pub async fn get_admin_dashboard_html(&self) -> String {
+        self.get_admin_dashboard().await.text().await.unwrap()
+    }
+
+    pub async fn get_admin_subscriptions(&self) -> reqwest::Response {
+        self.api_client
+            .get(&format!("{}/admin/subscriptions", &self.address))
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
+
+    pub async fn get_admin_subscriptions_html(&self) -> String {
+        self.get_admin_subscriptions().await.text().await.unwrap()
+    }
 }
 
 pub async fn spawn_app() -> TestApp {
@@ -52,9 +79,16 @@ pub async fn spawn_app() -> TestApp {
     let application_port = application.port();
     let _ = tokio::spawn(application.run_until_stopped());
 
+    let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .cookie_store(true)
+        .build()
+        .unwrap();
+
     TestApp {
         address: format!("http://localhost:{}", application_port),
         port: application_port,
+        api_client: client,
         db_pool: get_connection_pool(&configuration.database),
         email_server,
     }
