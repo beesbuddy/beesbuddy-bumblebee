@@ -62,6 +62,7 @@ mod tests {
 
     #[quickcheck_macros::quickcheck]
     fn valid_emails_are_parsed_successfully(valid_email: ValidEmailFixture) -> bool {
+        // TODO: Consider to use fake directly without arbitrary. This will let to update faker for you
         SubscriberEmail::parse(valid_email.0).is_ok()
     }
 }
