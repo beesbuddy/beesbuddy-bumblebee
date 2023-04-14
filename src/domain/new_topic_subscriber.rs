@@ -1,6 +1,6 @@
-use crate::domain::uuid::Uuid;
+use crate::domain::id::Id;
 
 pub struct NewTopicSubscriber {
-    pub organizationId: Uuid,
-    pub deviceId: Uuid,
+    pub organizationId: Id,
+    pub deviceId: Id,
 }

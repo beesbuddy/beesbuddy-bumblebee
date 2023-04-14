@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-set -x
+
+# Useful for script debugging
+# set -x
 set -eo pipefail
 
 if ! [ -x "$(command -v psql)" ]; then
@@ -32,7 +34,7 @@ then
   # if a postgres container is running, print instructions to kill it and exit
   RUNNING_POSTGRES_CONTAINER=$(docker ps --filter 'name=postgres' --format '{{.ID}}')
   if [[ -n $RUNNING_POSTGRES_CONTAINER ]]; then
-    echo >&2 "there is a postgres container already running, kill it with"
+    echo >&2 "There is a postgres container already running, kill it with"
     echo >&2 "    docker kill ${RUNNING_POSTGRES_CONTAINER}"
     exit 1
   fi

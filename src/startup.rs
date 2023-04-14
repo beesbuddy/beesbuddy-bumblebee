@@ -84,7 +84,7 @@ fn run(
             )
             .route("/health_check", web::get().to(health_check))
             .service(
-                actix_files::Files::new("/ui", web_dir_path.as_str())
+                actix_files::Files::new("/web", web_dir_path.as_str())
                     .redirect_to_slash_directory()
                     .index_file("index.html"),
             )
