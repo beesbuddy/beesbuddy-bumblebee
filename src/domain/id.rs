@@ -1,12 +1,12 @@
 use uuid::Uuid;
 
 #[derive(Debug)]
-pub struct Id(String);
+pub struct Id(Uuid);
 
 impl Id {
     pub fn parse(s: String) -> Result<Id, String> {
         match Uuid::try_parse(&s) {
-            Ok(u) => Ok(Self(u.to_string())),
+            Ok(u) => Ok(Self(u)),
             Err(_) => {
                 Err(format!("{} is not a valid uuid.", s))
             }
@@ -14,8 +14,8 @@ impl Id {
     }
 }
 
-impl AsRef<str> for Id {
-    fn as_ref(&self) -> &str {
+impl AsRef<Uuid> for Id {
+    fn as_ref(&self) -> &Uuid {
         &self.0
     }
 }

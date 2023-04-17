@@ -40,16 +40,26 @@ impl TestApp {
         self.get_admin_dashboard().await.text().await.unwrap()
     }
 
-    pub async fn get_admin_subscriptions(&self) -> reqwest::Response {
+    pub async fn get_admin_subscriptions_topics(&self) -> reqwest::Response {
         self.api_client
-            .get(&format!("{}/admin/subscriptions", &self.address))
+            .get(&format!("{}/admin/subscriptions/topics/view", &self.address))
             .send()
             .await
             .expect("Failed to execute request.")
     }
 
-    pub async fn get_admin_subscriptions_html(&self) -> String {
-        self.get_admin_subscriptions().await.text().await.unwrap()
+    pub async fn get_admin_subscriptions_topics_html(&self) -> String {
+        self.get_admin_subscriptions_topics().await.text().await.unwrap()
+    }
+
+    pub async fn post_subscriptions_topics(&self, body: String) -> reqwest::Response {
+        self.api_client
+            .post(&format!("{}/admin/subscriptions/topics/create", &self.address))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(body)
+            .send()
+            .await
+            .expect("Failed to execute request.")
     }
 }
 
@@ -77,7 +87,7 @@ pub async fn spawn_app() -> TestApp {
         .await
         .expect("Failed to build application.");
     let application_port = application.port();
-    let _ = tokio::spawn(application.run_until_stopped());
+    tokio::spawn(application.run_until_stopped());
 
     let client = reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::none())
@@ -114,4 +124,9 @@ async fn configure_database(config: &DatabaseSettings) -> PgPool {
         .expect("Failed to migrate the database");
 
     connection_pool
+}
+
+pub fn assert_is_redirect_to(response: &reqwest::Response, location: &str) {
+    assert_eq!(response.status().as_u16(), 303);
+    assert_eq!(response.headers().get("Location").unwrap(), location);
 }

@@ -1,6 +1,6 @@
 use actix_web::{http::header::ContentType, HttpResponse};
 
-pub async fn admin_dashboard() -> Result<HttpResponse, actix_web::Error> {
+pub async fn get_admin_dashboard() -> Result<HttpResponse, actix_web::Error> {
     Ok(HttpResponse::Ok().content_type(ContentType::html()).body(
         r#"
 <!DOCTYPE html>
@@ -13,7 +13,7 @@ pub async fn admin_dashboard() -> Result<HttpResponse, actix_web::Error> {
     <p>Welcome!</p>
     <p>Available actions:</p>
     <ol>
-        <li><a href="/admin/subscriptions">View subscriptions</a></li>
+        <li><a href="/admin/subscriptions/topics/view">View topics</a></li>
     </ol>
 </body>
 </html>"#

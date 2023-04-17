@@ -17,6 +17,7 @@ pub struct ApplicationSettings {
     pub host: String,
     pub base_url: String,
     pub web_dir_path: String,
+    pub hmac_secret: Secret<String>,
 }
 
 #[derive(serde::Deserialize, Clone)]
@@ -47,7 +48,7 @@ impl DatabaseSettings {
 
     pub fn with_db(&self) -> PgConnectOptions {
         let mut options = self.without_db().database(&self.database_name);
-        options.log_statements(tracing::log::LevelFilter::Trace);
+        options.log_statements(log::LevelFilter::Trace);
         options
     }
 }

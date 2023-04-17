@@ -1,5 +1,5 @@
 use crate::configuration::{DatabaseSettings, Settings};
-use crate::routes::{admin_dashboard, admin_subscriptions, health_check, home};
+use crate::routes::{get_admin_dashboard, get_view_admin_subscriptions_topics, get_create_admin_subscriptions_topics, health_check, home, post_create_admin_subscriptions_topics};
 use actix_web::dev::Server;
 use actix_web::web::Data;
 use actix_web::{web, App, HttpServer};
@@ -8,6 +8,11 @@ use sqlx::PgPool;
 use std::fs;
 use std::net::TcpListener;
 use std::path::PathBuf;
+use std::thread::scope;
+use actix_web::cookie::Key;
+use actix_web_flash_messages::FlashMessagesFramework;
+use actix_web_flash_messages::storage::CookieMessageStore;
+use secrecy::{ExposeSecret, Secret};
 use tracing_actix_web::TracingLogger;
 
 #[derive(thiserror::Error, Debug)]
@@ -38,6 +43,7 @@ impl Application {
             connection_pool,
             configuration.application.base_url,
             configuration.application.web_dir_path,
+            configuration.application.hmac_secret,
         )?;
 
         Ok(Self { port, server })
@@ -65,6 +71,7 @@ fn run(
     db_pool: PgPool,
     base_url: String,
     web_dir_path: String,
+    hmac_secret: Secret<String>,
 ) -> Result<Server, Error> {
     let db_pool = Data::new(db_pool);
     let base_url = Data::new(ApplicationBaseUrl(base_url));
@@ -72,15 +79,24 @@ fn run(
     fs::create_dir_all(web_dir_path.as_str())
         .map_err(|e| Error::Io(web_dir_path.parse().unwrap(), e))?;
 
+    let secret_key = Key::from(hmac_secret.expose_secret().as_bytes());
+    let message_store = CookieMessageStore::builder(secret_key.clone()).build();
+    let message_framework = FlashMessagesFramework::builder(message_store).build();
+
     // Create a logic that will create a dir if it doesn't exist.
     // Initialize PathBuf from string and use in actix_file
     let server = HttpServer::new(move || {
         App::new()
+            .wrap(message_framework.clone())
             .wrap(TracingLogger::default())
             .route("/", web::get().to(home))
             .service(web::scope("/admin")
-                .route("/dashboard", web::get().to(admin_dashboard))
-                .route("/subscriptions", web::get().to(admin_subscriptions))
+                .route("/dashboard", web::get().to(get_admin_dashboard))
+                .service(web::scope("/subscriptions")
+                    .route("/topics/view", web::get().to(get_view_admin_subscriptions_topics))
+                    .route("/topics/create", web::post().to(post_create_admin_subscriptions_topics))
+                    .route("/topics/create", web::get().to(get_create_admin_subscriptions_topics))
+                )
             )
             .route("/health_check", web::get().to(health_check))
             .service(
