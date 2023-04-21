@@ -1,7 +1,7 @@
-mod new_topic_subscriber;
+mod subscriber_topic;
 mod id;
 mod username;
 mod email;
 
-pub use new_topic_subscriber::NewTopicSubscriber;
+pub use subscriber_topic::{ViewSubscriberTopic, NewSubscriberTopic};
 pub use id::Id;
