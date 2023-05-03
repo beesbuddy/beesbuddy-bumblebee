@@ -8,9 +8,7 @@ use chrono::Utc;
 use sqlx::{PgPool, Postgres, Transaction};
 use std::convert::{TryFrom, TryInto};
 use std::fmt::Write;
-use tracing::subscriber;
-use tracing_subscriber::fmt::format;
-use uuid::{uuid, Uuid};
+use uuid::Uuid;
 
 #[derive(serde::Deserialize)]
 pub struct FormData {
@@ -65,8 +63,7 @@ pub async fn get_view_admin_subscriptions_topics(
         writeln!(
             topics_html,
             "<p><i>{} - {} </i></p>",
-            topic.organization_id.to_string(),
-            topic.device_id.to_string()
+            topic.organization_id, topic.device_id
         )
         .unwrap();
     }

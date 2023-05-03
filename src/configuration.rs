@@ -8,6 +8,7 @@ use std::convert::{TryFrom, TryInto};
 pub struct Settings {
     pub database: DatabaseSettings,
     pub application: ApplicationSettings,
+    pub mqtt: MqttSettings,
 }
 
 #[derive(serde::Deserialize, Clone)]
@@ -53,6 +54,15 @@ impl DatabaseSettings {
     }
 }
 
+#[derive(serde::Deserialize, Clone)]
+pub struct MqttSettings {
+    #[serde(deserialize_with = "deserialize_number_from_string")]
+    pub port: u16,
+    pub host: String,
+    pub username: String,
+    pub password: String,
+}
+
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {
     let base_path = std::env::current_dir().expect("Failed to determine the current directory");
     let configuration_directory = base_path.join("configuration");
@@ -83,7 +93,7 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
     settings.try_deserialize::<Settings>()
 }
 
-/// The possible runtime environment for our application.
+// The possible runtime environment for our application.
 pub enum Environment {
     Local,
     Production,

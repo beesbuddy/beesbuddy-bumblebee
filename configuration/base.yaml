@@ -9,3 +9,8 @@ database:
   password: "password"
   database_name: "beesbuddy"
   require_ssl: false
+mqtt:
+  host: "test.mosquitto.org"
+  port: 1883
+  username: ""
+  password: ""

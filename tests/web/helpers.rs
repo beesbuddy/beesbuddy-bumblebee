@@ -1,5 +1,5 @@
+use beesbuddy_bumblebee::application::{get_connection_pool, Application};
 use beesbuddy_bumblebee::configuration::{get_configuration, DatabaseSettings};
-use beesbuddy_bumblebee::startup::{get_connection_pool, Application};
 use beesbuddy_bumblebee::telemetry::{get_subscriber, init_subscriber};
 use once_cell::sync::Lazy;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
@@ -42,19 +42,29 @@ impl TestApp {
 
     pub async fn get_admin_subscriptions_topics(&self) -> reqwest::Response {
         self.api_client
-            .get(&format!("{}/admin/subscriptions/topics/view", &self.address))
+            .get(&format!(
+                "{}/admin/subscriptions/topics/view",
+                &self.address
+            ))
             .send()
             .await
             .expect("Failed to execute request.")
     }
 
     pub async fn get_admin_subscriptions_topics_html(&self) -> String {
-        self.get_admin_subscriptions_topics().await.text().await.unwrap()
+        self.get_admin_subscriptions_topics()
+            .await
+            .text()
+            .await
+            .unwrap()
     }
 
     pub async fn post_subscriptions_topics(&self, body: String) -> reqwest::Response {
         self.api_client
-            .post(&format!("{}/admin/subscriptions/topics/create", &self.address))
+            .post(&format!(
+                "{}/admin/subscriptions/topics/create",
+                &self.address
+            ))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(body)
             .send()

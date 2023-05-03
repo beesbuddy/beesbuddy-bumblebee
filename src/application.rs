@@ -1,18 +1,21 @@
 use crate::configuration::{DatabaseSettings, Settings};
-use crate::routes::{get_admin_dashboard, get_view_admin_subscriptions_topics, get_create_admin_subscriptions_topics, health_check, home, post_create_admin_subscriptions_topics};
+use crate::routes::{
+    get_admin_dashboard, get_create_admin_subscriptions_topics,
+    get_view_admin_subscriptions_topics, health_check, home,
+    post_create_admin_subscriptions_topics,
+};
+use actix_web::cookie::Key;
 use actix_web::dev::Server;
 use actix_web::web::Data;
 use actix_web::{web, App, HttpServer};
+use actix_web_flash_messages::storage::CookieMessageStore;
+use actix_web_flash_messages::FlashMessagesFramework;
+use secrecy::{ExposeSecret, Secret};
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use std::fs;
 use std::net::TcpListener;
 use std::path::PathBuf;
-use std::thread::scope;
-use actix_web::cookie::Key;
-use actix_web_flash_messages::FlashMessagesFramework;
-use actix_web_flash_messages::storage::CookieMessageStore;
-use secrecy::{ExposeSecret, Secret};
 use tracing_actix_web::TracingLogger;
 
 #[derive(thiserror::Error, Debug)]
@@ -54,7 +57,7 @@ impl Application {
     }
 
     pub async fn run_until_stopped(self) -> Result<(), Error> {
-        self.server.await.map_err(|e| Error::Startup(e))
+        self.server.await.map_err(Error::Startup)
     }
 }
 
@@ -90,13 +93,24 @@ fn run(
             .wrap(message_framework.clone())
             .wrap(TracingLogger::default())
             .route("/", web::get().to(home))
-            .service(web::scope("/admin")
-                .route("/dashboard", web::get().to(get_admin_dashboard))
-                .service(web::scope("/subscriptions")
-                    .route("/topics/view", web::get().to(get_view_admin_subscriptions_topics))
-                    .route("/topics/create", web::post().to(post_create_admin_subscriptions_topics))
-                    .route("/topics/create", web::get().to(get_create_admin_subscriptions_topics))
-                )
+            .service(
+                web::scope("/admin")
+                    .route("/dashboard", web::get().to(get_admin_dashboard))
+                    .service(
+                        web::scope("/subscriptions")
+                            .route(
+                                "/topics/view",
+                                web::get().to(get_view_admin_subscriptions_topics),
+                            )
+                            .route(
+                                "/topics/create",
+                                web::post().to(post_create_admin_subscriptions_topics),
+                            )
+                            .route(
+                                "/topics/create",
+                                web::get().to(get_create_admin_subscriptions_topics),
+                            ),
+                    ),
             )
             .route("/health_check", web::get().to(health_check))
             .service(

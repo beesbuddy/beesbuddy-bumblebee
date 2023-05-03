@@ -1,19 +1,21 @@
 use actix_web::http::header::LOCATION;
 use actix_web::HttpResponse;
+use std::fmt::{Debug, Display};
+use tokio::task::JoinError;
 
 // Return an opaque 500 while preserving the error root's cause for logging.
 pub fn e500<T>(e: T) -> actix_web::Error
 where
-    T: std::fmt::Debug + std::fmt::Display + 'static,
+    T: Debug + Display + 'static,
 {
     actix_web::error::ErrorInternalServerError(e)
 }
 
 // Return a 400 with the user-representation of the validation error as body.
 // The error root cause is preserved for logging purposes.
-pub fn e400<T: std::fmt::Debug + std::fmt::Display>(e: T) -> actix_web::Error
+pub fn e400<T: Debug + Display>(e: T) -> actix_web::Error
 where
-    T: std::fmt::Debug + std::fmt::Display + 'static,
+    T: Debug + Display + 'static,
 {
     actix_web::error::ErrorBadRequest(e)
 }
@@ -35,4 +37,28 @@ pub fn error_chain_fmt(
         current = cause.source();
     }
     Ok(())
+}
+
+pub fn report_exit(task_name: &str, outcome: Result<Result<(), impl Debug + Display>, JoinError>) {
+    match outcome {
+        Ok(Ok(())) => {
+            tracing::info!("{} has exited", task_name)
+        }
+        Ok(Err(e)) => {
+            tracing::error!(
+                error.cause_chain = ?e,
+                error.message = %e,
+                "{} failed",
+                task_name
+            )
+        }
+        Err(e) => {
+            tracing::error!(
+                error.cause_chain = ?e,
+                error.message = %e,
+                "{}' failed to complete",
+                task_name
+            )
+        }
+    }
 }
