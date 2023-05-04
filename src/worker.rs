@@ -6,7 +6,7 @@ use crate::listener::{ActionType, SubscriptionTopicsNotificationPayload};
 use crate::utils;
 use log::warn;
 use rumqttc::{AsyncClient, Event, EventLoop, Incoming, QoS};
-use sqlx::PgPool;
+use sqlx::{Error, PgPool};
 use std::ops::Deref;
 use std::string::FromUtf8Error;
 use std::time::Duration;
@@ -136,28 +136,34 @@ async fn setup_initial_subscribers(
 ) -> Result<(), anyhow::Error> {
     let mut transaction = pool.begin().await?;
 
-    let subscriptions = sqlx::query!(
+    match sqlx::query!(
         r#"
         SELECT organization_id, device_id
             FROM subscriptions_topics
         "#,
     )
     .fetch_all(&mut transaction)
-    .await?;
-
-    for subscription in subscriptions {
-        match client.try_subscribe(
-            format!(
-                "apiary/{}/hive/{}",
-                subscription.organization_id, subscription.device_id
-            ),
-            QoS::AtLeastOnce,
-        ) {
-            Ok(_) => info!(
-                "added subscription: apiary/{}/hive/{}",
-                subscription.organization_id, subscription.device_id
-            ),
-            Err(err) => error!("error on adding subscription: {err:?}"),
+    .await
+    {
+        Ok(subscriptions) => {
+            for subscription in subscriptions {
+                match client.try_subscribe(
+                    format!(
+                        "apiary/{}/hive/{}",
+                        subscription.organization_id, subscription.device_id
+                    ),
+                    QoS::AtLeastOnce,
+                ) {
+                    Ok(_) => info!(
+                        "added subscription: apiary/{}/hive/{}",
+                        subscription.organization_id, subscription.device_id
+                    ),
+                    Err(err) => error!("error on adding subscription: {err:?}"),
+                }
+            }
+        }
+        Err(err) => {
+            warn!("Not able to initialize subscriptions = {err:?}")
         }
     }
 

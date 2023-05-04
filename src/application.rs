@@ -86,8 +86,6 @@ fn run(
     let message_store = CookieMessageStore::builder(secret_key.clone()).build();
     let message_framework = FlashMessagesFramework::builder(message_store).build();
 
-    // Create a logic that will create a dir if it doesn't exist.
-    // Initialize PathBuf from string and use in actix_file
     let server = HttpServer::new(move || {
         App::new()
             .wrap(message_framework.clone())
