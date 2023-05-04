@@ -1,0 +1,67 @@
+{
+  "db": "PostgreSQL",
+  "164542676c4d485c1bcbd99fa859e7ac42662207f95be7a06c1a95dd09f0c0d5": {
+    "describe": {
+      "columns": [
+        {
+          "name": "organization_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "device_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        }
+      ],
+      "nullable": [
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\n        SELECT organization_id, device_id\n            FROM subscriptions_topics\n        "
+  },
+  "4a256ffa614a7cc30b1c2464c728e68d3f229dd0f40d8004878989d8be4e9592": {
+    "describe": {
+      "columns": [
+        {
+          "name": "organization_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "device_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        }
+      ],
+      "nullable": [
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\n    SELECT organization_id, device_id FROM subscriptions_topics\n    "
+  },
+  "bfe2782ae9e89817d777b118bde5edd82c3b67d647cdb638bed28d9e90fb28df": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Uuid",
+          "Uuid",
+          "Timestamptz",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "\n    INSERT INTO subscriptions_topics (id, organization_id, device_id, created_at, updated_at)\n    VALUES ($1, $2, $3, $4, $5)\n            "
+  }
+}
