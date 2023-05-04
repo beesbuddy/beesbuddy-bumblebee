@@ -1,3 +1,4 @@
+use crate::influxdb_client::InfluxDbClient;
 use secrecy::{ExposeSecret, Secret};
 use serde_aux::field_attributes::deserialize_number_from_string;
 use sqlx::postgres::{PgConnectOptions, PgSslMode};
@@ -9,6 +10,7 @@ pub struct Settings {
     pub database: DatabaseSettings,
     pub application: ApplicationSettings,
     pub mqtt: MqttSettings,
+    pub influxdb: InfluxDbSettings,
 }
 
 #[derive(serde::Deserialize, Clone)]
@@ -61,6 +63,34 @@ pub struct MqttSettings {
     pub host: String,
     pub username: String,
     pub password: String,
+}
+
+#[derive(serde::Deserialize, Clone)]
+pub struct InfluxDbSettings {
+    pub host: String,
+    pub token: Secret<String>,
+    pub organization_id: String,
+    pub bucket_id: String,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
+    pub timeout_milliseconds: u64,
+}
+
+impl InfluxDbSettings {
+    pub fn client(self) -> InfluxDbClient {
+        let timeout = self.timeout();
+
+        InfluxDbClient::new(
+            self.host,
+            self.bucket_id,
+            self.organization_id,
+            self.token,
+            timeout,
+        )
+    }
+
+    pub fn timeout(&self) -> std::time::Duration {
+        std::time::Duration::from_millis(self.timeout_milliseconds)
+    }
 }
 
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {

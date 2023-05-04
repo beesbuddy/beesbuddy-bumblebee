@@ -14,3 +14,9 @@ mqtt:
   port: 1883
   username: ""
   password: ""
+influxdb:
+  host: "https://us-east-1-1.aws.cloud2.influxdata.com"
+  token: ""
+  organization_id: "BeesBuddy"
+  bucket_id: "apiaries"
+  timeout_milliseconds: 5000

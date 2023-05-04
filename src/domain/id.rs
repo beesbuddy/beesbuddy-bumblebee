@@ -1,15 +1,13 @@
 use uuid::Uuid;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Id(Uuid);
 
 impl Id {
     pub fn parse(s: String) -> Result<Id, String> {
         match Uuid::try_parse(&s) {
             Ok(u) => Ok(Self(u)),
-            Err(_) => {
-                Err(format!("{} is not a valid uuid.", s))
-            }
+            Err(_) => Err(format!("{} is not a valid uuid.", s)),
         }
     }
 }
