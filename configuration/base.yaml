@@ -3,17 +3,10 @@ application:
   host: 0.0.0.0
   hmac_secret: "super-long-and-secret-random-key-needed-to-verify-message-integrity"
   web_dir_path: "./web"
-database:
-  host: "127.0.0.1"
-  port: 5432
-  username: "postgres"
-  password: "password"
-  database_name: "beesbuddy"
-  require_ssl: false
 mqtt:
-  host: "test.mosquitto.org"
-  port: 1883
-  username: ""
+  host: "fc0974b9da5b45acb35544dd8d013bcf.s2.eu.hivemq.cloud"
+  port: 8883
+  username: "bumblebee"
   password: ""
 influxdb:
   host: "https://us-east-1-1.aws.cloud2.influxdata.com"

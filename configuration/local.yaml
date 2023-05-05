@@ -3,4 +3,9 @@ application:
   base_url: "http://127.0.0.1"
   web_dir_path: "./web"
 database:
+  host: "127.0.0.1"
+  port: 5432
+  username: "postgres"
+  password: "password"
+  database_name: "beesbuddy"
   require_ssl: false

@@ -4,7 +4,9 @@ use beesbuddy_bumblebee::listener::run_listener_until_stopped;
 use beesbuddy_bumblebee::telemetry::{get_subscriber, init_subscriber};
 use beesbuddy_bumblebee::worker::run_worker_until_stopped;
 use beesbuddy_bumblebee::{application, utils};
-use rumqttc::{AsyncClient, MqttOptions};
+use rumqttc::tokio_rustls::rustls;
+use rumqttc::tokio_rustls::rustls::ClientConfig;
+use rumqttc::{AsyncClient, MqttOptions, Transport};
 use std::fmt::Debug;
 use std::time::Duration;
 
@@ -24,11 +26,31 @@ async fn main() -> Result<(), Error> {
     let configuration = get_configuration().expect("Failed to read configuration.");
 
     let mut mqtt_options = MqttOptions::new(
-        "beesbuddy-bumblebee", 
-        configuration.clone().mqtt.host, 
+        "beesbuddy-bumblebee",
+        configuration.clone().mqtt.host,
         configuration.clone().mqtt.port,
     );
-    mqtt_options.set_keep_alive(Duration::from_secs(10));
+    mqtt_options.set_keep_alive(Duration::from_secs(5));
+    mqtt_options.set_credentials(
+        configuration.clone().mqtt.username,
+        configuration.clone().mqtt.password,
+    );
+    mqtt_options.set_clean_session(true);
+
+    let mut root_cert_store = rustls::RootCertStore::empty();
+    for cert in rustls_native_certs::load_native_certs().expect("could not load platform certs") {
+        root_cert_store
+            .add(&rustls::Certificate(cert.0))
+            .expect("unable to add certs");
+    }
+
+    let client_config = ClientConfig::builder()
+        .with_safe_defaults()
+        .with_root_certificates(root_cert_store)
+        .with_no_client_auth();
+
+    mqtt_options.set_transport(Transport::tls_with_config(client_config.into()));
+
     let (async_client, event_loop) = AsyncClient::new(mqtt_options, 10);
 
     let application = Application::build(configuration.clone()).await?;
