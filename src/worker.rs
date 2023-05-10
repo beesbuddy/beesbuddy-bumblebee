@@ -94,15 +94,12 @@ async fn run_subscriptions_change_listener(
         match payload.action_type {
             ActionType::INSERT => {
                 match client.try_subscribe(
-                    format!(
-                        "apiary/{}/hive/{}",
-                        payload.organization_id, payload.device_id
-                    ),
+                    format!("{}/{}", payload.topic_prefix, payload.device_name),
                     QoS::AtLeastOnce,
                 ) {
                     Ok(_) => info!(
-                        "added subscription: apiary/{}/hive/{}",
-                        payload.organization_id, payload.device_id
+                        "added subscription: {}/{}",
+                        payload.topic_prefix, payload.device_name
                     ),
                     Err(err) => {
                         error!("error on adding subscription: {err:?}")
@@ -110,13 +107,12 @@ async fn run_subscriptions_change_listener(
                 }
             }
             ActionType::DELETE => {
-                match client.try_unsubscribe(format!(
-                    "apiary/{}/hive/{}",
-                    payload.organization_id, payload.device_id
-                )) {
+                match client
+                    .try_unsubscribe(format!("{}/{}", payload.topic_prefix, payload.device_name))
+                {
                     Ok(_) => info!(
-                        "removed subscription: apiary/{}/hive/{}",
-                        payload.organization_id, payload.device_id
+                        "removed subscription: {}/{}",
+                        payload.topic_prefix, payload.device_name
                     ),
                     Err(err) => {
                         error!("error on removing subscription: {err:?}")
@@ -138,7 +134,7 @@ async fn setup_initial_subscribers(
 
     match sqlx::query!(
         r#"
-        SELECT organization_id, device_id
+        SELECT topic_prefix, device_name
             FROM subscriptions_topics
         "#,
     )
@@ -148,15 +144,12 @@ async fn setup_initial_subscribers(
         Ok(subscriptions) => {
             for subscription in subscriptions {
                 match client.try_subscribe(
-                    format!(
-                        "apiary/{}/hive/{}",
-                        subscription.organization_id, subscription.device_id
-                    ),
+                    format!("{}/{}", subscription.topic_prefix, subscription.device_name),
                     QoS::AtLeastOnce,
                 ) {
                     Ok(_) => info!(
-                        "added subscription: apiary/{}/hive/{}",
-                        subscription.organization_id, subscription.device_id
+                        "added subscription: {}/{}",
+                        subscription.topic_prefix, subscription.device_name
                     ),
                     Err(err) => error!("error on adding subscription: {err:?}"),
                 }

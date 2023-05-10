@@ -37,19 +37,22 @@ async fn main() -> Result<(), Error> {
     );
     mqtt_options.set_clean_session(true);
 
-    let mut root_cert_store = rustls::RootCertStore::empty();
-    for cert in rustls_native_certs::load_native_certs().expect("could not load platform certs") {
-        root_cert_store
-            .add(&rustls::Certificate(cert.0))
-            .expect("unable to add certs");
+    if configuration.clone().mqtt.port == 8883 {
+        let mut root_cert_store = rustls::RootCertStore::empty();
+        for cert in rustls_native_certs::load_native_certs().expect("could not load platform certs")
+        {
+            root_cert_store
+                .add(&rustls::Certificate(cert.0))
+                .expect("unable to add certs");
+        }
+
+        let client_config = ClientConfig::builder()
+            .with_safe_defaults()
+            .with_root_certificates(root_cert_store)
+            .with_no_client_auth();
+
+        mqtt_options.set_transport(Transport::tls_with_config(client_config.into()));
     }
-
-    let client_config = ClientConfig::builder()
-        .with_safe_defaults()
-        .with_root_certificates(root_cert_store)
-        .with_no_client_auth();
-
-    mqtt_options.set_transport(Transport::tls_with_config(client_config.into()));
 
     let (async_client, event_loop) = AsyncClient::new(mqtt_options, 10);
 

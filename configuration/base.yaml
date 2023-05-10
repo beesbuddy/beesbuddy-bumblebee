@@ -4,8 +4,8 @@ application:
   hmac_secret: "super-long-and-secret-random-key-needed-to-verify-message-integrity"
   web_dir_path: "./web"
 mqtt:
-  host: "fc0974b9da5b45acb35544dd8d013bcf.s2.eu.hivemq.cloud"
-  port: 8883
+  host: "165.227.131.239"
+  port: 1883
   username: "bumblebee"
   password: ""
 influxdb:

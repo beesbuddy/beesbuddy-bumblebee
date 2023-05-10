@@ -1,14 +1,15 @@
 use serde::Deserialize;
+use serde_aux::field_attributes::deserialize_number_from_string;
 
 #[derive(Deserialize, Debug)]
 pub struct HiveData {
-    pub apiary_id: String,
-    pub hive_id: String,
+    pub device_name: String,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
     pub weight: u32,
-    pub inner_temperature: u32,
-    pub inner_humidity: u32,
-    pub outer_temperature: u32,
-    pub outer_humidity: u32,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
+    pub temperature: f32,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
+    pub humidity: f32,
 }
 
 impl TryFrom<Vec<u8>> for HiveData {
@@ -27,14 +28,9 @@ impl TryFrom<Vec<u8>> for HiveData {
 
 impl HiveData {
     pub fn format_line_point(&self) -> String {
-        format!("hive_sensors,apiary_id={},hive_id={} inner_temperature={},inner_humidity={},outer_temperature={},outer_humidity={},weight={}", 
-                self.apiary_id,
-                self.hive_id,
-                self.inner_temperature,
-                self.inner_humidity,
-                self.outer_temperature,
-                self.outer_humidity,
-                self.weight
+        format!(
+            "hive_sensors,device_name={} temperature={},humidity={},weight={}",
+            self.device_name, self.temperature, self.humidity, self.weight
         )
     }
 }

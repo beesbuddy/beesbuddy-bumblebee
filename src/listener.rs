@@ -20,6 +20,8 @@ pub struct SubscriptionTopicsNotificationPayload {
     pub action_type: ActionType,
     pub organization_id: Uuid,
     pub device_id: Uuid,
+    pub device_name: String,
+    pub topic_prefix: String,
 }
 
 #[tracing::instrument(name = "Listener loop", skip(configuration, tx))]

@@ -14,6 +14,8 @@ use uuid::Uuid;
 pub struct FormData {
     device_id: String,
     organization_id: String,
+    device_name: String,
+    topic_prefix: String,
 }
 
 impl TryFrom<FormData> for NewSubscriberTopic {
@@ -22,9 +24,14 @@ impl TryFrom<FormData> for NewSubscriberTopic {
     fn try_from(value: FormData) -> Result<Self, Self::Error> {
         let device_id = Id::parse(value.device_id)?;
         let organization_id = Id::parse(value.organization_id)?;
+        let device_name = value.device_name;
+        let topic_prefix = value.topic_prefix;
+
         Ok(Self {
             organization_id,
             device_id,
+            device_name,
+            topic_prefix,
         })
     }
 }
@@ -62,8 +69,8 @@ pub async fn get_view_admin_subscriptions_topics(
     for topic in topics {
         writeln!(
             topics_html,
-            "<p><i>{} - {} </i></p>",
-            topic.organization_id, topic.device_id
+            "<p><i>topic: {}/{}, for apiary {} and hive {} </i></p>",
+            topic.topic_prefix, topic.device_name, topic.organization_id, topic.device_id
         )
         .unwrap();
     }
@@ -111,19 +118,37 @@ pub async fn get_create_admin_subscriptions_topics(
     <p>Create subscription for topic</p>
     <form action="/admin/subscriptions/topics/create" method="post">
         <div style="margin-bottom: 5px">
-            <label>Organization id:<br>
+             <label>Topic prefix:<br>
                 <input
                     type="text"
-                    placeholder="Enter organization id"
+                    placeholder="Enter topic prefix"
+                    name="topic_prefix"
+                >
+            </label>
+        </div>
+        <div style="margin-bottom: 5px">
+             <label>Device name:<br>
+                <input
+                    type="text"
+                    placeholder="Enter device name"
+                    name="device_name"
+                >
+            </label>
+        </div>
+        <div style="margin-bottom: 5px">
+            <label>Apiary id:<br>
+                <input
+                    type="text"
+                    placeholder="Enter apiary id"
                     name="organization_id"
                 >
             </label>
         </div>
         <div style="margin-bottom: 5px">
-             <label>Device id:<br>
+             <label>Hive id:<br>
                 <input
                     type="text"
-                    placeholder="Enter device id"
+                    placeholder="Enter hive id"
                     name="device_id"
                 >
             </label>
@@ -142,7 +167,9 @@ name = "Adding a new subscriber",
 skip(form, pool),
 fields(
 organization_id = % form.organization_id,
-device_id = % form.device_id
+device_id = % form.device_id,
+device_name = % form.device_name,
+topic_prefix = % form.topic_prefix,
 )
 )]
 pub async fn post_create_admin_subscriptions_topics(
@@ -153,6 +180,9 @@ pub async fn post_create_admin_subscriptions_topics(
         .0
         .try_into()
         .map_err(TopicSubscribeError::ValidationError)?;
+
+    println!("{:?}", new_subscriber);
+
     let mut transaction = pool
         .begin()
         .await
@@ -176,7 +206,7 @@ pub async fn select_subscribers_topics(
     let subscribers = sqlx::query_as!(
         ViewSubscriberTopic,
         r#"
-    SELECT organization_id, device_id FROM subscriptions_topics
+    SELECT organization_id, device_id, device_name, topic_prefix FROM subscriptions_topics
     "#
     )
     .fetch_all(pool)
@@ -198,12 +228,14 @@ pub async fn insert_subscriber_topic(
     let subscriber_id = Uuid::new_v4();
     sqlx::query!(
         r#"
-    INSERT INTO subscriptions_topics (id, organization_id, device_id, created_at, updated_at)
-    VALUES ($1, $2, $3, $4, $5)
+    INSERT INTO subscriptions_topics (id, organization_id, device_id, device_name, topic_prefix, created_at, updated_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
             "#,
         subscriber_id,
         new_subscriber.organization_id.as_ref(),
         new_subscriber.device_id.as_ref(),
+        new_subscriber.device_name,
+        new_subscriber.topic_prefix,
         Utc::now(),
         Utc::now()
     )
