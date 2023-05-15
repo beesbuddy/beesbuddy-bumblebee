@@ -4,7 +4,6 @@ use beesbuddy_bumblebee::listener::run_listener_until_stopped;
 use beesbuddy_bumblebee::telemetry::{get_subscriber, init_subscriber};
 use beesbuddy_bumblebee::worker::run_worker_until_stopped;
 use beesbuddy_bumblebee::{application, utils};
-use fake::faker;
 use rumqttc::tokio_rustls::rustls;
 use rumqttc::tokio_rustls::rustls::ClientConfig;
 use rumqttc::{AsyncClient, MqttOptions, Transport};
