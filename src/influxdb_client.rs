@@ -1,6 +1,4 @@
-use crate::domain::HiveData;
-use anyhow::anyhow;
-use log::{debug, info, warn};
+use log::{info, warn};
 use reqwest::Client;
 use secrecy::{ExposeSecret, Secret};
 
@@ -39,23 +37,6 @@ impl InfluxDbClient {
 
         info!("data point to store in influxdb: {payload:?}");
 
-        let content = self
-            .http_client
-            .post(&url)
-            .header(
-                "Authorization",
-                format!("Token {}", self.authorization_token.expose_secret()),
-            )
-            .header("Content-Type", "text/plain; charset=utf-8")
-            .header("Accept", "application/json")
-            .body(payload.to_string())
-            .send()
-            .await?
-            .text()
-            .await?;
-
-        info!("{content:?}");
-
         match self
             .http_client
             .post(&url)
@@ -70,9 +51,12 @@ impl InfluxDbClient {
             .await?
             .error_for_status()
         {
-            Ok(_) => Ok(()),
+            Ok(content) => {
+                info!("data point successfully stored with response from server: {content:?}");
+                Ok(()) 
+            },
             Err(err) => {
-                warn!("Error during point line data send = {err:?}");
+                warn!("error during point line data send = {err:?}");
                 anyhow::bail!("Error during point line data send = {err:?}")
             }
         }
