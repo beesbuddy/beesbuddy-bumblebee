@@ -1,8 +1,9 @@
 use beesbuddy_bumblebee::application::Application;
 use beesbuddy_bumblebee::configuration::get_configuration;
-use beesbuddy_bumblebee::listener::run_listener_until_stopped;
 use beesbuddy_bumblebee::telemetry::{get_subscriber, init_subscriber};
-use beesbuddy_bumblebee::worker::run_worker_until_stopped;
+use beesbuddy_bumblebee::workers::{
+    run_mqtt_worker_until_stopped, run_subscription_worker_until_stopped,
+};
 use beesbuddy_bumblebee::{application, utils};
 use rumqttc::tokio_rustls::rustls;
 use rumqttc::tokio_rustls::rustls::ClientConfig;
@@ -53,22 +54,24 @@ async fn main() -> Result<(), Error> {
         mqtt_options.set_transport(Transport::tls_with_config(client_config.into()));
     }
 
-    let (async_client, event_loop) = AsyncClient::new(mqtt_options, 10);
-
     let application = Application::build(configuration.clone()).await?;
     let application_task = tokio::spawn(application.run_until_stopped());
-    let worker_task = tokio::spawn(run_worker_until_stopped(
+
+    let (mqtt_client, mqtt_event_loop) = AsyncClient::new(mqtt_options, 20);
+    let mqtt_worker_task = tokio::spawn(run_mqtt_worker_until_stopped(
         configuration.clone(),
         rx,
-        async_client,
-        event_loop,
+        mqtt_client,
+        mqtt_event_loop,
     ));
-    let listener_task = tokio::spawn(run_listener_until_stopped(configuration, tx));
+
+    let subscriptions_worker_task =
+        tokio::spawn(run_subscription_worker_until_stopped(configuration, tx));
 
     tokio::select! {
         o = application_task => utils::report_exit("Web application", o),
-        o = worker_task =>  utils::report_exit("Metrics delivery worker", o),
-        o = listener_task =>  utils::report_exit("Table change listener", o),
+        o = mqtt_worker_task =>  utils::report_exit("Metrics/mqtt delivery worker", o),
+        o = subscriptions_worker_task =>  utils::report_exit("Table/subscriptions change listener", o),
     }
 
     Ok(())

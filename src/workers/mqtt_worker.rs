@@ -2,42 +2,56 @@ use crate::application::get_connection_pool;
 use crate::configuration::Settings;
 use crate::domain::HiveData;
 use crate::influxdb_client::InfluxDbClient;
-use crate::listener::{ActionType, SubscriptionTopicsNotificationPayload};
 use crate::utils;
+use crate::workers::{ActionType, SubscriptionTopicsNotificationPayload};
 use log::warn;
 use rumqttc::{AsyncClient, Event, EventLoop, Incoming, QoS};
-use sqlx::{PgPool};
+use sqlx::PgPool;
 use std::time::Duration;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tracing::{error, info};
 
-// TODO: Make it more generic
-pub async fn run_worker_until_stopped(
+pub async fn run_mqtt_worker_until_stopped(
     configuration: Settings,
     rx: UnboundedReceiver<SubscriptionTopicsNotificationPayload>,
-    client: AsyncClient,
-    event_loop: EventLoop,
+    mqtt_client: AsyncClient,
+    mqtt_event_loop: EventLoop,
 ) -> Result<(), anyhow::Error> {
     let connection_pool = get_connection_pool(&configuration.database);
     let influxdb_client = configuration.influxdb.client();
-    worker_loop(connection_pool, rx, client, event_loop, influxdb_client).await
+    mqtt_worker_loop(
+        connection_pool,
+        rx,
+        mqtt_client,
+        mqtt_event_loop,
+        influxdb_client,
+    )
+    .await
 }
 
 #[tracing::instrument(
-    name = "Worker loop",
-    skip(pool, rx, client, event_loop, influxdb_client)
+    name = "Mqtt worker loop",
+    skip(db_pool, rx, client, event_loop, influxdb_client)
 )]
-async fn worker_loop(
-    pool: PgPool,
+async fn mqtt_worker_loop(
+    db_pool: PgPool,
     rx: UnboundedReceiver<SubscriptionTopicsNotificationPayload>,
-    mut client: AsyncClient,
+    client: AsyncClient,
     event_loop: EventLoop,
     influxdb_client: InfluxDbClient,
 ) -> Result<(), anyhow::Error> {
-    setup_initial_subscribers(pool, &mut client).await.unwrap();
+    setup_initial_subscribers(db_pool.clone(), client.clone())
+        .await
+        .unwrap();
 
-    let notification_receiver = tokio::spawn(run_message_processor(event_loop, influxdb_client));
-    let subscriptions_change_listener = tokio::spawn(run_subscriptions_change_listener(rx, client));
+    let notification_receiver = tokio::spawn(run_message_processor(
+        db_pool.clone(),
+        client.clone(),
+        event_loop,
+        influxdb_client,
+    ));
+    let subscriptions_change_listener =
+        tokio::spawn(run_subscriptions_change_listener(rx, client.clone()));
 
     tokio::select! {
         o = notification_receiver => utils::report_exit("Notification receiver", o),
@@ -47,13 +61,19 @@ async fn worker_loop(
     Ok(())
 }
 
-#[tracing::instrument(name = "Processing message", skip(event_loop, influxdb_client))]
+#[tracing::instrument(
+    name = "Processing mqtt message",
+    skip(db_pool, mqtt_client, mqtt_event_loop, influxdb_client)
+)]
 async fn run_message_processor(
-    mut event_loop: EventLoop,
+    db_pool: PgPool,
+    mqtt_client: AsyncClient,
+    mut mqtt_event_loop: EventLoop,
     influxdb_client: InfluxDbClient,
 ) -> Result<(), anyhow::Error> {
     loop {
-        let event = event_loop.poll().await;
+        let event = mqtt_event_loop.poll().await;
+
         match &event {
             Ok(notification) => match notification {
                 Event::Incoming(incoming) => {
@@ -74,7 +94,11 @@ async fn run_message_processor(
             },
             Err(error) => {
                 warn!("Error during message receive = {error:?}");
-                tokio::time::sleep(Duration::from_secs(3)).await;
+                tokio::time::sleep(Duration::from_secs(60)).await;
+                match setup_initial_subscribers(db_pool.clone(), mqtt_client.clone()).await {
+                    Ok(_) => info!("Initialized subscribers again"),
+                    Err(error) => warn!("Error during subscribers initializing = {error:?}"),
+                }
             }
         }
     }
@@ -124,10 +148,7 @@ async fn run_subscriptions_change_listener(
     }
 }
 
-async fn setup_initial_subscribers(
-    pool: PgPool,
-    client: &mut AsyncClient,
-) -> Result<(), anyhow::Error> {
+async fn setup_initial_subscribers(pool: PgPool, client: AsyncClient) -> Result<(), anyhow::Error> {
     let mut transaction = pool.begin().await?;
 
     match sqlx::query!(
@@ -149,7 +170,7 @@ async fn setup_initial_subscribers(
                         "added subscription: {}/{}",
                         subscription.topic_prefix, subscription.device_name
                     ),
-                    Err(err) => error!("error on adding subscription: {err:?}"),
+                    Err(err) => warn!("error on adding subscription: {err:?}"),
                 }
             }
         }

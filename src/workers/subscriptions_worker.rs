@@ -24,21 +24,20 @@ pub struct SubscriptionTopicsNotificationPayload {
     pub topic_prefix: String,
 }
 
-#[tracing::instrument(name = "Listener loop", skip(configuration, tx))]
-pub async fn run_listener_until_stopped(
+#[tracing::instrument(name = "Subscription worker loop", skip(configuration, tx))]
+pub async fn run_subscription_worker_until_stopped(
     configuration: Settings,
     tx: UnboundedSender<SubscriptionTopicsNotificationPayload>,
 ) -> Result<(), anyhow::Error> {
     let connection_pool = get_connection_pool(&configuration.database);
-    listener_loop(&connection_pool, tx).await
+    subscription_worker_loop(&connection_pool, tx).await
 }
 
-// TODO: Make it more generic so it would be possible to track changes for any table with any payload
-async fn listener_loop(
-    pool: &PgPool,
+async fn subscription_worker_loop(
+    db_pool: &PgPool,
     tx: UnboundedSender<SubscriptionTopicsNotificationPayload>,
 ) -> Result<(), anyhow::Error> {
-    let mut listener = PgListener::connect_with(pool).await.unwrap();
+    let mut listener = PgListener::connect_with(db_pool).await.unwrap();
     listener.listen_all(vec!["subscriptions_topics"]).await?;
 
     loop {
