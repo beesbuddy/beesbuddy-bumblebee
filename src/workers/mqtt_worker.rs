@@ -85,7 +85,7 @@ async fn run_message_processor(
                                     .await;
                             }
                             Err(err) => {
-                                warn!("Error during raw payload reading = {err:?}");
+                                error!("Error during raw payload reading = {err:?}");
                             }
                         }
                     }
@@ -93,11 +93,11 @@ async fn run_message_processor(
                 Event::Outgoing(_) => {}
             },
             Err(error) => {
-                warn!("Error during message receive = {error:?}");
+                error!("Error during message receive = {error:?}");
                 tokio::time::sleep(Duration::from_secs(60)).await;
                 match setup_initial_subscribers(db_pool.clone(), mqtt_client.clone()).await {
                     Ok(_) => info!("Initialized subscribers again"),
-                    Err(error) => warn!("Error during subscribers initializing = {error:?}"),
+                    Err(error) => error!("Error during subscribers initializing = {error:?}"),
                 }
             }
         }
