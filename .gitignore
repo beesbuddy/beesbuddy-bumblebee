@@ -2,3 +2,4 @@
 .idea
 tags
 web/node_modules
+web/node_modules/**/*
