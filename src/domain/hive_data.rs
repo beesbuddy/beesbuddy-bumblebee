@@ -14,6 +14,8 @@ pub struct HiveData {
     pub humidity: f32,
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub battery_level: f32,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
+    pub signal_quality: u32,
 }
 
 impl TryFrom<Vec<u8>> for HiveData {
@@ -33,8 +35,8 @@ impl TryFrom<Vec<u8>> for HiveData {
 impl HiveData {
     pub fn format_line_point(&self) -> String {
         format!(
-            "hive_sensors,device_name={} temperature={},humidity={},weight={},offset={},battery_level={}",
-            self.device_name, self.temperature, self.humidity, self.weight, self.offset, self.battery_level
+            "hive_sensors,device_name={} temperature={},humidity={},weight={},offset={},battery_level={},signal_quality={}",
+            self.device_name, self.temperature, self.humidity, self.weight, self.offset, self.battery_level, self.signal_quality
         )
     }
 }

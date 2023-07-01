@@ -10,6 +10,7 @@ use actix_web::web::Data;
 use actix_web::{web, App, HttpServer};
 use actix_web_flash_messages::storage::CookieMessageStore;
 use actix_web_flash_messages::FlashMessagesFramework;
+use handlebars::Handlebars;
 use secrecy::{ExposeSecret, Secret};
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
@@ -86,6 +87,11 @@ fn run(
     let message_store = CookieMessageStore::builder(secret_key.clone()).build();
     let message_framework = FlashMessagesFramework::builder(message_store).build();
 
+    let mut hbs = Handlebars::new();
+    hbs.register_templates_directory(".hbs", "./web/src")
+        .unwrap();
+    let handlebars = Data::new(hbs);
+
     let server = HttpServer::new(move || {
         App::new()
             .wrap(message_framework.clone())
@@ -118,6 +124,7 @@ fn run(
             )
             .app_data(db_pool.clone())
             .app_data(base_url.clone())
+            .app_data(handlebars.clone())
     })
     .listen(listener)?
     .run();

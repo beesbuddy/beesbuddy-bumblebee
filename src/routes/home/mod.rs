@@ -1,7 +1,8 @@
-use actix_web::{http::header::ContentType, HttpResponse};
+use actix_web::{http::header::ContentType, web, HttpResponse};
+use handlebars::Handlebars;
 
-pub async fn home() -> HttpResponse {
+pub async fn home(hb: web::Data<Handlebars<'_>>) -> HttpResponse {
     HttpResponse::Ok()
         .content_type(ContentType::html())
-        .body(include_str!("home.html"))
+        .body(hb.render("home", &()).unwrap())
 }
